@@ -14,6 +14,7 @@ from kubernetes import client, config
 from kubernetes.client.rest import ApiException
 from pprint import pprint
 
+# Following is the template to render REST API body
 BASE_TEMPLATE = '''
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -46,6 +47,8 @@ PORTS_TEMPLATE = '''
       port: {port}
 '''
 
+# DATA should be the source data from MMS
+'''
 DATA = {
     "namespaces": ["test"],
     "contracts": {
@@ -67,6 +70,24 @@ DATA = {
         }
     }
 }
+'''
+DATA = {
+    "namespaces": ["test2"],
+    "contracts": {
+        "usr2web": {
+            "provide_networks": ["web"],
+            "consume_networks": ["usr"],
+            "ports": [
+                {"protocol": "TCP", "port": "23"},
+                {"protocol": "TCP", "port": "80"}
+            ]
+        },
+        "any2any": {
+            "provide_networks": ["web", "vlan1", "vlan2", "vlan3"],
+            "consume_networks": ["web", "vlan1", "vlan2", "vlan3"]
+        }
+    }
+}
 
 
 def get_body():
@@ -77,19 +98,21 @@ def get_body():
     for contract in DATA["contracts"]:
         pnets = DATA["contracts"][contract]["provide_networks"]
         cnets = DATA["contracts"][contract]["consume_networks"]
-        nets = pnets + cnets  # Do not eliminate redundancy! Net should be processed twice if if it's both provide & consume
+        nets = list(set(pnets + cnets))  # all nets but eliminate redundancy
         for net in nets:
             if not _body.get(net):
                 _body[net] = BASE_TEMPLATE.format(mynet=net)
             if net in pnets:
-                _body[net] += FROM_TEMPLATE.format(yournets=", ".join(cnets))
+                if net in cnets:  # for those both in provide and consume
+                    _body[net] += FROM_TEMPLATE.format(yournets=", ".join(nets))  # allow all other net in
+                else:  # 'else' means 'provide only'
+                    _body[net] += FROM_TEMPLATE.format(yournets=", ".join(cnets))  # only allow consume in
                 if DATA["contracts"][contract].get("ports"):
                     _body[net] += "    ports: "
                     for port in DATA["contracts"][contract]["ports"]:
                         _body[net] += PORTS_TEMPLATE.format(protocol=port["protocol"], port=port["port"])
-
-            if net in cnets:
-                _body[net] += FROM_TEMPLATE.format(yournets=", ".join(pnets))
+            else:  # for those consume net only
+                _body[net] += FROM_TEMPLATE.format(yournets=", ".join(pnets))  # allow only provide net in
 
     return _body
 
@@ -108,9 +131,10 @@ def main():
         for namespace in DATA["namespaces"]:
             for net in bodies:
                 body = yaml.load(bodies[net], Loader=yaml.FullLoader)
-                api_response = api_instance.create_namespaced_network_policy(namespace, body, pretty="true")
-                pprint(api_response)  # used for wet-run
-                # print(bodies[net])  # used for dry-run
+                api_response = api_instance.create_namespaced_network_policy(namespace, body, pretty="true",
+                                                                             dry_run="All")
+                # pprint(api_response)  # used for wet-run
+                print(bodies[net])  # used for dry-run
 
     except ApiException as e:
         print("Exception when calling APIs: %s\n" % e)
