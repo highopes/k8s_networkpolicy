@@ -14,33 +14,37 @@ from kubernetes import client, config
 from kubernetes.client.rest import ApiException
 from pprint import pprint
 
-BASE_TEMPLATE = \
-    '''apiVersion: networking.k8s.io/v1
-    kind: NetworkPolicy
-    metadata: 
-      name: {mynet}
-    spec: 
+BASE_TEMPLATE = '''
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: 
+  name: {mynet}
+spec: 
+  podSelector: 
+    matchLabels: 
+      mms_network_tag: {mynet}
+  policyTypes: 
+  - Ingress
+  ingress: 
+  - from: 
+    - namespaceSelector: {{}}
       podSelector: 
-        matchLabels: 
+        matchLabels:
           mms_network_tag: {mynet}
-      policyTypes: 
-      - Ingress
-      ingress: 
-    '''
+'''
 
-FROM_TEMPLATE = \
-    '''  - from: 
-        - namespaceSelector: {{}}
-          podSelector: 
-            matchExpressions: 
-              - {{key: mms_network_tag, operator: In, values: [{mynet}{yournets}]}}
-    '''
+FROM_TEMPLATE = '''
+  - from: 
+    - namespaceSelector: {{}}
+      podSelector: 
+        matchExpressions: 
+          - {{key: mms_network_tag, operator: In, values: [{yournets}]}}
+'''
 
-PORTS_TEMPLATE = \
-    '''
-        - protocol: {protocol}
-          port: {port}
-    '''
+PORTS_TEMPLATE = '''
+    - protocol: {protocol}
+      port: {port}
+'''
 
 DATA = {
     "namespaces": ["test"],
@@ -78,14 +82,14 @@ def get_body():
             if not _body.get(net):
                 _body[net] = BASE_TEMPLATE.format(mynet=net)
             if net in pnets:
-                _body[net] += FROM_TEMPLATE.format(mynet=net, yournets=", " + ", ".join(cnets))
+                _body[net] += FROM_TEMPLATE.format(yournets=", ".join(cnets))
                 if DATA["contracts"][contract].get("ports"):
                     _body[net] += "    ports: "
                     for port in DATA["contracts"][contract]["ports"]:
                         _body[net] += PORTS_TEMPLATE.format(protocol=port["protocol"], port=port["port"])
 
             if net in cnets:
-                _body[net] += FROM_TEMPLATE.format(mynet=net, yournets=", " + ", ".join(pnets))
+                _body[net] += FROM_TEMPLATE.format(yournets=", ".join(pnets))
 
     return _body
 
@@ -105,7 +109,8 @@ def main():
             for net in bodies:
                 body = yaml.load(bodies[net], Loader=yaml.FullLoader)
                 api_response = api_instance.create_namespaced_network_policy(namespace, body, pretty="true")
-                pprint(api_response)
+                pprint(api_response)  # used for wet-run
+                # print(bodies[net])  # used for dry-run
 
     except ApiException as e:
         print("Exception when calling APIs: %s\n" % e)
