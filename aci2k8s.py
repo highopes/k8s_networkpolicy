@@ -14,6 +14,30 @@ from kubernetes import client, config
 from kubernetes.client.rest import ApiException
 from pprint import pprint
 
+DRY_RUN = False  # if it's False, means all policies will be delivered to cluster
+
+# DATA should be the source data from MMS
+DATA = {
+    "namespaces": ["test2"],
+    "contracts": {
+        "usr2web": {
+            "provide_networks": ["web"],
+            "consume_networks": ["usr"],
+            "ports": [
+                {"protocol": "TCP", "port": "23"},
+                {"protocol": "TCP", "port": "80"}
+            ]
+        },
+        "any2any": {
+            "provide_networks": ["web", "vlan3"],
+            "consume_networks": ["vlan1", "vlan2", "vlan3"],
+            "ports": [
+                {"protocol": "TCP", "port": "23"}
+            ]
+        }
+    }
+}
+
 # Following is the template to render REST API body
 BASE_TEMPLATE = '''
 apiVersion: networking.k8s.io/v1
@@ -46,48 +70,6 @@ PORTS_TEMPLATE = '''
     - protocol: {protocol}
       port: {port}
 '''
-
-# DATA should be the source data from MMS
-'''
-DATA = {
-    "namespaces": ["test"],
-    "contracts": {
-        "usr2web": {
-            "provide_networks": ["web"],
-            "consume_networks": ["usr"],
-            "ports": [
-                {"protocol": "TCP", "port": "23"},
-                {"protocol": "TCP", "port": "80"}
-            ]
-        },
-        "web2db": {
-            "provide_networks": ["db"],
-            "consume_networks": ["web"],
-            "ports": [
-                {"protocol": "TCP", "port": "3306"},
-                {"protocol": "TCP", "port": "23"}
-            ]
-        }
-    }
-}
-'''
-DATA = {
-    "namespaces": ["test2"],
-    "contracts": {
-        "usr2web": {
-            "provide_networks": ["web"],
-            "consume_networks": ["usr"],
-            "ports": [
-                {"protocol": "TCP", "port": "23"},
-                {"protocol": "TCP", "port": "80"}
-            ]
-        },
-        "any2any": {
-            "provide_networks": ["web", "vlan1", "vlan2", "vlan3"],
-            "consume_networks": ["web", "vlan1", "vlan2", "vlan3"]
-        }
-    }
-}
 
 
 def get_body():
@@ -131,10 +113,13 @@ def main():
         for namespace in DATA["namespaces"]:
             for net in bodies:
                 body = yaml.load(bodies[net], Loader=yaml.FullLoader)
-                api_response = api_instance.create_namespaced_network_policy(namespace, body, pretty="true",
-                                                                             dry_run="All")
-                # pprint(api_response)  # used for wet-run
-                print(bodies[net])  # used for dry-run
+                if DRY_RUN:
+                    api_response = api_instance.create_namespaced_network_policy(namespace, body, pretty="true",
+                                                                                 dry_run="All")
+                else:
+                    api_response = api_instance.create_namespaced_network_policy(namespace, body, pretty="true")
+                    # pprint(api_response)  # used for diagnostics
+                print(bodies[net])
 
     except ApiException as e:
         print("Exception when calling APIs: %s\n" % e)
