@@ -1,0 +1,37 @@
+{
+  "namespaces": [
+    "mms"
+  ],
+  "contracts": {
+    "hangwe-inst-constract01": {
+      "provide_networks": [
+        "hangwe-inst-network02"
+      ],
+      "consume_networks": [
+        "hangwe-inst-network01"
+      ],
+      "ports": [
+        {
+          "protocol": "TCP",
+          "port": "23"
+        },
+        {
+          "protocol": "TCP",
+          "port": "3306"
+        }
+      ]
+    }
+  },
+  "expose": {
+    "hangwe-inst-network01": {
+      "cidr": "0.0.0.0/0",
+      "except": [],
+      "ports": [
+        {
+          "protocol": "TCP",
+          "port": "80"
+        }
+      ]
+    }
+  }
+}

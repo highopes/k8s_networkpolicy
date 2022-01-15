@@ -10,6 +10,7 @@ from __future__ import print_function
 import time
 from os import path
 import yaml
+import json
 from kubernetes import client, config
 from kubernetes.client.rest import ApiException
 from pprint import pprint
@@ -17,28 +18,33 @@ from pprint import pprint
 DRY_RUN = False  # if it's False, means all policies will be delivered to cluster
 
 # DATA should be the source data from which networkpolicies were derived
-DATA = {
-    "namespaces": ["mms"],
-    "contracts": {
-        "hangwe-inst-constract01": {
-            "provide_networks": ["hangwe-inst-network02"],
-            "consume_networks": ["hangwe-inst-network01"],
-            "ports": [
-                {"protocol": "TCP", "port": "23"},
-                {"protocol": "TCP", "port": "3306"}
-            ]
-        }
-    },
-    "expose": {
-        "hangwe-inst-network01": {
-            "cidr": "0.0.0.0/0",
-            "except": [],
-            "ports": [
-                {"protocol": "TCP", "port": "80"},
-            ]
+try:
+    with open(path.join(path.dirname(__file__), "input_data.json")) as f:
+        DATA = json.load(f)
+
+except FileNotFoundError as e:
+    DATA = {
+        "namespaces": ["mms"],
+        "contracts": {
+            "hangwe-inst-constract01": {
+                "provide_networks": ["hangwe-inst-network02"],
+                "consume_networks": ["hangwe-inst-network01"],
+                "ports": [
+                    {"protocol": "TCP", "port": "23"},
+                    {"protocol": "TCP", "port": "3306"}
+                ]
+            }
+        },
+        "expose": {
+            "hangwe-inst-network01": {
+                "cidr": "0.0.0.0/0",
+                "except": [],
+                "ports": [
+                    {"protocol": "TCP", "port": "80"}
+                ]
+            }
         }
     }
-}
 
 # Following is the template to render REST API body of busy box pod
 BASE_TEMPLATE = '''
