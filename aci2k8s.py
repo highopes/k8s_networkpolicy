@@ -18,21 +18,23 @@ DRY_RUN = False  # if it's False, means all policies will be delivered to cluste
 
 # DATA should be the source data from MMS
 DATA = {
-    "namespaces": ["test2"],
+    "namespaces": ["mms"],
     "contracts": {
-        "usr2web": {
-            "provide_networks": ["web"],
-            "consume_networks": ["usr"],
+        "hangwe-inst-constract01": {
+            "provide_networks": ["hangwe-inst-network02"],
+            "consume_networks": ["hangwe-inst-network01"],
             "ports": [
                 {"protocol": "TCP", "port": "23"},
-                {"protocol": "TCP", "port": "80"}
+                {"protocol": "TCP", "port": "3306"}
             ]
-        },
-        "any2any": {
-            "provide_networks": ["web", "vlan3"],
-            "consume_networks": ["vlan1", "vlan2", "vlan3"],
+        }
+    },
+    "expose": {
+        "hangwe-inst-network01": {
+            "cidr": "0.0.0.0/0",
+            "except": [],
             "ports": [
-                {"protocol": "TCP", "port": "23"}
+                {"protocol": "TCP", "port": "80"},
             ]
         }
     }
@@ -96,6 +98,19 @@ def get_body():
             else:  # for those consume net only
                 _body[net] += FROM_TEMPLATE.format(yournets=", ".join(pnets))  # allow only provide net in
 
+        if DATA.get("expose"):
+            for net in DATA["expose"]:
+                cidr = DATA["expose"][net]["cidr"]
+                except_list = DATA["expose"][net]["except"]
+                _body[net] += "  - from: \n    - ipBlock: \n        cidr: {}\n".format(cidr)
+                if except_list:
+                    _body[net] += "        except: \n        - "
+                    _body[net] += "\n        - ".join(except_list)
+                if DATA["expose"][net].get("ports"):
+                    _body[net] += "\n    ports: "
+                    for port in DATA["expose"][net]["ports"]:
+                        _body[net] += PORTS_TEMPLATE.format(protocol=port["protocol"], port=port["port"])
+
     return _body
 
 
@@ -105,6 +120,8 @@ def main():
     # default location.
 
     bodies = get_body()
+    for net in bodies:
+        print(bodies[net])
 
     config.load_kube_config()
 
@@ -119,7 +136,6 @@ def main():
                 else:
                     api_response = api_instance.create_namespaced_network_policy(namespace, body, pretty="true")
                     # pprint(api_response)  # used for diagnostics
-                print(bodies[net])
 
     except ApiException as e:
         print("Exception when calling APIs: %s\n" % e)

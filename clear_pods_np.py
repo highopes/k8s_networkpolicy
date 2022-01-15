@@ -14,23 +14,28 @@ from kubernetes import client, config
 from kubernetes.client.rest import ApiException
 from pprint import pprint
 
+Clear_Pods = False
+Clear_NetworkPolicies = True
+
 # DATA should be the source data from which networkpolicies were derived
 DATA = {
-    "namespaces": ["test2"],
+    "namespaces": ["mms"],
     "contracts": {
-        "usr2web": {
-            "provide_networks": ["web"],
-            "consume_networks": ["usr"],
+        "hangwe-inst-constract01": {
+            "provide_networks": ["hangwe-inst-network02"],
+            "consume_networks": ["hangwe-inst-network01"],
             "ports": [
                 {"protocol": "TCP", "port": "23"},
-                {"protocol": "TCP", "port": "80"}
+                {"protocol": "TCP", "port": "3306"}
             ]
-        },
-        "any2any": {
-            "provide_networks": ["web", "vlan3"],
-            "consume_networks": ["vlan1", "vlan2", "vlan3"],
+        }
+    },
+    "expose": {
+        "hangwe-inst-network01": {
+            "cidr": "0.0.0.0/0",
+            "except": [],
             "ports": [
-                {"protocol": "TCP", "port": "23"}
+                {"protocol": "TCP", "port": "80"},
             ]
         }
     }
@@ -64,10 +69,12 @@ def main():
         net_inst = client.NetworkingV1Api()
         for ns in DATA["namespaces"]:
             for net in all_net:
-                core_inst.delete_namespaced_pod(name=net + "-pod", namespace=ns, grace_period_seconds=0)
-                net_inst.delete_namespaced_network_policy(name=net, namespace=ns, grace_period_seconds=0)
-
-            core_inst.delete_namespaced_pod(name=ns + "-out", namespace=ns, grace_period_seconds=0)
+                if Clear_Pods:
+                    core_inst.delete_namespaced_pod(name=net + "-pod", namespace=ns, grace_period_seconds=0)
+                if Clear_NetworkPolicies:
+                    net_inst.delete_namespaced_network_policy(name=net, namespace=ns, grace_period_seconds=0)
+            if Clear_Pods:
+                core_inst.delete_namespaced_pod(name=ns + "-out", namespace=ns, grace_period_seconds=0)
 
     except ApiException as e:
         print("Exception when calling APIs: %s\n" % e)

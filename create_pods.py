@@ -18,21 +18,23 @@ DRY_RUN = False  # if it's False, means all policies will be delivered to cluste
 
 # DATA should be the source data from which networkpolicies were derived
 DATA = {
-    "namespaces": ["test2"],
+    "namespaces": ["mms"],
     "contracts": {
-        "usr2web": {
-            "provide_networks": ["web"],
-            "consume_networks": ["usr"],
+        "hangwe-inst-constract01": {
+            "provide_networks": ["hangwe-inst-network02"],
+            "consume_networks": ["hangwe-inst-network01"],
             "ports": [
                 {"protocol": "TCP", "port": "23"},
-                {"protocol": "TCP", "port": "80"}
+                {"protocol": "TCP", "port": "3306"}
             ]
-        },
-        "any2any": {
-            "provide_networks": ["web", "vlan3"],
-            "consume_networks": ["vlan1", "vlan2", "vlan3"],
+        }
+    },
+    "expose": {
+        "hangwe-inst-network01": {
+            "cidr": "0.0.0.0/0",
+            "except": [],
             "ports": [
-                {"protocol": "TCP", "port": "23"}
+                {"protocol": "TCP", "port": "80"},
             ]
         }
     }
@@ -97,8 +99,8 @@ def main():
     # default location.
 
     bodies = get_body()
-    # for net in bodies:
-    #     print(bodies[net])
+    for net in bodies:
+        print(bodies[net])
 
     config.load_kube_config()
 
@@ -113,7 +115,6 @@ def main():
                 else:
                     api_response = api_instance.create_namespaced_pod(namespace, body, pretty="true")
                     # pprint(api_response)  # used for diagnostics
-                print(bodies[net])
 
             if not DRY_RUN:
                 body_nolabel = yaml.load(POD_NO_LABELD.format(ns=namespace), Loader=yaml.FullLoader)
