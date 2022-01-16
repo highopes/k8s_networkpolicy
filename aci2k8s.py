@@ -14,37 +14,11 @@ import json
 from kubernetes import client, config
 from kubernetes.client.rest import ApiException
 from pprint import pprint
+from my_py.k8s.data_input import read_data
 
-DRY_RUN = False  # if it's False, means all policies will be delivered to cluster
+DRY_RUN = True  # if it's False, means all policies will be delivered to cluster
 
-# DATA should be the source data from MMS
-try:
-    with open(path.join(path.dirname(__file__), "input_data.json")) as f:
-        DATA = json.load(f)
-
-except FileNotFoundError as e:
-    DATA = {
-        "namespaces": ["mms"],
-        "contracts": {
-            "hangwe-inst-constract01": {
-                "provide_networks": ["hangwe-inst-network02"],
-                "consume_networks": ["hangwe-inst-network01"],
-                "ports": [
-                    {"protocol": "TCP", "port": "23"},
-                    {"protocol": "TCP", "port": "3306"}
-                ]
-            }
-        },
-        "expose": {
-            "hangwe-inst-network01": {
-                "cidr": "0.0.0.0/0",
-                "except": [],
-                "ports": [
-                    {"protocol": "TCP", "port": "80"}
-                ]
-            }
-        }
-    }
+DATA = read_data()  # input data from MMS or other policy orchestrator
 
 # Following is the template to render REST API body
 BASE_TEMPLATE = '''
@@ -56,8 +30,10 @@ spec:
   podSelector: 
     matchLabels: 
       mms_network_tag: {mynet}
+
   policyTypes: 
   - Ingress
+
   ingress: 
   - from: 
     - namespaceSelector: {{}}
@@ -104,18 +80,20 @@ def get_body():
             else:  # for those consume net only
                 _body[net] += FROM_TEMPLATE.format(yournets=", ".join(pnets))  # allow only provide net in
 
-        if DATA.get("expose"):
-            for net in DATA["expose"]:
-                cidr = DATA["expose"][net]["cidr"]
-                except_list = DATA["expose"][net]["except"]
-                _body[net] += "  - from: \n    - ipBlock: \n        cidr: {}\n".format(cidr)
-                if except_list:
-                    _body[net] += "        except: \n        - "
-                    _body[net] += "\n        - ".join(except_list)
-                if DATA["expose"][net].get("ports"):
-                    _body[net] += "\n    ports: "
-                    for port in DATA["expose"][net]["ports"]:
-                        _body[net] += PORTS_TEMPLATE.format(protocol=port["protocol"], port=port["port"])
+    if DATA.get("expose"):
+        for ex in DATA["expose"]:
+            net = ex["network"]
+            cidr = ex["cidr"]
+            except_list = ex["except"]
+            _body[net] += "\n  - from: \n    - ipBlock: \n        cidr: {}\n".format(cidr)
+            if except_list:
+                _body[net] += "        except: \n        - "
+                _body[net] += "\n        - ".join(except_list)
+                _body[net] += "\n"
+            if ex.get("ports"):
+                _body[net] += "    ports: "
+                for port in ex["ports"]:
+                    _body[net] += PORTS_TEMPLATE.format(protocol=port["protocol"], port=port["port"])
 
     return _body
 
