@@ -38,7 +38,170 @@ Due to the limitations of the Kubernetes Network Policy feature, the Group Polic
 
 ### aci2k8s.py
 
-Push the Group-based Policies to Kubernetes cluster (make sure the kubeconfig is in ~/.kube directory with the proper authorization). Different network policies can be implemented by modifying the DATA variable.
+Push the Group-based Policies to Kubernetes cluster (make sure the kubeconfig is in ~/.kube directory with the proper authorization). Different network policies can be implemented by modifying the JSON file input_data.json, which also can be extracted from MMS or other orchestrators.
+
+For example, we want to express the following group-based network policy as follows:
+
+
+
+This policy is expressed as a JSON file whose contents will look like this:
+```json
+{
+  "namespaces": [
+    "mms"
+  ],
+  "contracts": {
+    "hangwe_inst_constract01": {
+      "provide_networks": [
+        "hangwe_inst_network02"
+      ],
+      "consume_networks": [
+        "hangwe_inst_network01"
+      ],
+      "ports": [
+        {
+          "protocol": "TCP",
+          "port": "23"
+        },
+        {
+          "protocol": "TCP",
+          "port": "3306"
+        }
+      ]
+    },
+    "hangwe_inst_constract02": {
+      "provide_networks": [
+        "hangwe_inst_network01"
+      ],
+      "consume_networks": [
+        "hangwe_inst_network03"
+      ],
+      "ports": [
+        {
+          "protocol": "TCP",
+          "port": "23"
+        }
+      ]
+    }
+  },
+  "expose": [
+    {
+      "network": "hangwe_inst_network01",
+      "cidr": "0.0.0.0/0",
+      "except": [],
+      "ports": [
+        {
+          "protocol": "TCP",
+          "port": "80"
+        }
+      ]
+    }
+  ]
+}
+```
+
+This application generates the following networkpolicies objects after deployment to a Kubernetes cluster:
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: hangwe-inst-network01
+spec:
+  podSelector:
+    matchLabels:
+      mms_network_tag: hangwe-inst-network01
+
+  policyTypes:
+  - Ingress
+
+  ingress:
+  - from:
+    - namespaceSelector: {}
+      podSelector:
+        matchLabels:
+          mms_network_tag: hangwe-inst-network01
+
+  - from:
+    - namespaceSelector: {}
+      podSelector:
+        matchExpressions:
+          - {key: mms_network_tag, operator: In, values: [hangwe-inst-network02]}
+
+  - from:
+    - namespaceSelector: {}
+      podSelector:
+        matchExpressions:
+          - {key: mms_network_tag, operator: In, values: [hangwe-inst-network03]}
+    ports:
+    - protocol: TCP
+      port: 23
+
+  - from:
+    - ipBlock:
+        cidr: 0.0.0.0/0
+    ports:
+    - protocol: TCP
+      port: 80
+
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: hangwe-inst-network02
+spec:
+  podSelector:
+    matchLabels:
+      mms_network_tag: hangwe-inst-network02
+
+  policyTypes:
+  - Ingress
+
+  ingress:
+  - from:
+    - namespaceSelector: {}
+      podSelector:
+        matchLabels:
+          mms_network_tag: hangwe-inst-network02
+
+  - from:
+    - namespaceSelector: {}
+      podSelector:
+        matchExpressions:
+          - {key: mms_network_tag, operator: In, values: [hangwe-inst-network01]}
+    ports:
+    - protocol: TCP
+      port: 23
+
+    - protocol: TCP
+      port: 3306
+
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: hangwe-inst-network03
+spec:
+  podSelector:
+    matchLabels:
+      mms_network_tag: hangwe-inst-network03
+
+  policyTypes:
+  - Ingress
+
+  ingress:
+  - from:
+    - namespaceSelector: {}
+      podSelector:
+        matchLabels:
+          mms_network_tag: hangwe-inst-network03
+
+  - from:
+    - namespaceSelector: {}
+      podSelector:
+        matchExpressions:
+          - {key: mms_network_tag, operator: In, values: [hangwe-inst-network01]}
+
+```
 
 ### create_pods.py
 
