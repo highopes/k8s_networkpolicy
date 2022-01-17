@@ -4,7 +4,7 @@
 #                          weihanghank@gmail.com                                  #
 ###################################################################################
 """
-Deploy pods to target system to test networkpolicies
+Remove test pods and/or network policies from target system
 """
 from __future__ import print_function
 import time

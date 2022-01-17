@@ -4,7 +4,7 @@
 #                          weihanghank@gmail.com                                  #
 ###################################################################################
 """
-Extracting raw data, processing and returning
+Extract raw data from json file, and return python element after processing (incl. name conversion)
 """
 from __future__ import print_function
 from os import path
