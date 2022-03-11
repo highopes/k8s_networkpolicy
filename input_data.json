@@ -1,14 +1,14 @@
 {
   "namespaces": [
-    "mms"
+    "test02"
   ],
   "contracts": {
-    "hangwe_inst_constract01": {
+    "test02_contract01": {
       "provide_networks": [
-        "hangwe_inst_network02"
+        "test02_web"
       ],
       "consume_networks": [
-        "hangwe_inst_network01"
+        "test02_usr"
       ],
       "ports": [
         {
@@ -17,28 +17,14 @@
         },
         {
           "protocol": "TCP",
-          "port": "3306"
-        }
-      ]
-    },
-    "hangwe_inst_constract02": {
-      "provide_networks": [
-        "hangwe_inst_network01"
-      ],
-      "consume_networks": [
-        "hangwe_inst_network03"
-      ],
-      "ports": [
-        {
-          "protocol": "TCP",
-          "port": "23"
+          "port": "80"
         }
       ]
     }
   },
   "expose": [
     {
-      "network": "hangwe_inst_network01",
+      "network": "test02_web",
       "cidr": "0.0.0.0/0",
       "except": [],
       "ports": [

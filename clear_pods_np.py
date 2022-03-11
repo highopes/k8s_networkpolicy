@@ -16,7 +16,7 @@ from kubernetes.client.rest import ApiException
 from pprint import pprint
 from my_py.k8s.data_input import read_data
 
-Clear_Pods = True
+Clear_Pods = False
 Clear_NetworkPolicies = True
 
 DATA = read_data()  # input data from MMS or other policy orchestrator

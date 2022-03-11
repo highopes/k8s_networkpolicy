@@ -5,6 +5,7 @@
 ###################################################################################
 """
 Deploy pods to target system to test networkpolicies
+This script does not create namespaces. Make sure all namespaces have been created.
 """
 from __future__ import print_function
 import time
@@ -96,7 +97,7 @@ def main():
                     api_response = api_instance.create_namespaced_pod(namespace, body, pretty="true")
                     # pprint(api_response)  # used for diagnostics
 
-            if not DRY_RUN:
+            if not DRY_RUN: # create pod without label
                 body_nolabel = yaml.load(POD_NO_LABELD.format(ns=namespace), Loader=yaml.FullLoader)
                 api_response = api_instance.create_namespaced_pod(namespace, body_nolabel, pretty="true")
 

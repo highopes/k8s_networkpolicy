@@ -5,6 +5,7 @@
 ###################################################################################
 """
 Creates networkpolicies using apiVersion: networking.k8s.io/v1 based on MMS Network Template Instance
+This script does not create namespaces. Make sure all namespaces have been created.
 """
 from __future__ import print_function
 import time
@@ -16,7 +17,7 @@ from kubernetes.client.rest import ApiException
 from pprint import pprint
 from my_py.k8s.data_input import read_data
 
-DRY_RUN = True  # if it's False, means all policies will be delivered to cluster
+DRY_RUN = False  # if it's False, means all policies will be delivered to cluster
 
 DATA = read_data()  # input data from MMS or other policy orchestrator
 
