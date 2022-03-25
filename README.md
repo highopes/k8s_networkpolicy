@@ -8,7 +8,7 @@ Neither the network nor the application people are familiar with the way network
 
 * The basic logic of Group-based Policy is to connect the cloud workload to the network providing the service (provider network) and the network using the service (consumer network) independent of addresses, infrastructure elements (e.g. VLANs, etc.). Communication can only occur between networks that have directly established a relationship for service provisioning or consuming, and the policies to establish such mutual relationship is called a contract.
 
-* The service providers are generally considered to have a higher security level, and they have no restrictions on access to the consumers, while visitors can only use the protocols and ports specified by the providers.
+* The service providers are generally considered to have a higher security level, and they have no restrictions on access to the consumers, while consumers can only access the protocols and ports opened by the providers. Of course this default rule can be modified so that the security level of either the consumer or the provider is equivalent, and the provider does not have direct access to protocols and ports that the consumer does not authorize. In this case it is only necessary to fine-tune this code so that only the provider has a rule that opens the protocols and port numbers on the local side, so that communication only occurs on the protocols and ports given by the provider (note that k8s' Network Policy is stateful, it allows traffic back to the consumer.)
 
 * For a contract, a network can be both a provider and a consumer, thus establishing mutual communication with other parties while keeping itself secure.
 
